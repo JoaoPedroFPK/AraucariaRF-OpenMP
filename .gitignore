@@ -1,0 +1,63 @@
+# Build directories
+build/
+bin/
+
+# Compiled Object files
+*.o
+*.obj
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Static and shared libraries
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+
+# VTune profiling results
+results/profiling/*.amplxe/
+results/profiling/*.vtune/
+*.amplxe
+*.vtune
+
+# Performance test outputs
+results/performance/*.csv
+results/performance/*.log
+results/performance/graphs/*.png
+results/performance/graphs/*.pdf
+
+# Temporary files
+*.tmp
+*.temp
+*~
+.DS_Store
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Data files (large datasets)
+data/raw/*.csv
+data/raw/*.txt
+data/raw/*.dat
+!data/raw/README.md
+
+# Generated documentation
+docs/report/*.pdf
+docs/presentation/*.pdf
+docs/presentation/*.pptx
+
+# Log files
+*.log
