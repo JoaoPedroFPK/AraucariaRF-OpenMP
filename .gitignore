@@ -59,5 +59,29 @@ docs/report/*.pdf
 docs/presentation/*.pdf
 docs/presentation/*.pptx
 
+# LaTeX build files
+*.aux
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+*.toc
+*.bbl
+*.blg
+*.idx
+*.ilg
+*.ind
+*.lof
+*.lot
+*.nlo
+*.nls
+*.glg
+*.glo
+*.gls
+*.ist
+*.acn
+*.acr
+*.alg
+*.glsdefs
+
 # Log files
 *.log

@@ -76,6 +76,7 @@ double get_time_diff(struct timeval start, struct timeval end);
 void print_performance_metrics(PerformanceMetrics* metrics, const char* dataset_name);
 int* generate_random_features(int n_total_features, int n_selected_features);
 int get_majority_class(int* predictions, int n_predictions);
+void merge_sort(double* arr, int n);
 
 // Constants
 #define MAX_TREE_DEPTH 10

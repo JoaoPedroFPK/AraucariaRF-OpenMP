@@ -1,0 +1,308 @@
+\documentclass[a4paper,11pt]{article}
+\usepackage{fullpage}           %   set page margins to 1.5
+\usepackage{amsmath}            %   align equations
+\usepackage{amssymb}            %   math symbols
+\usepackage{booktabs}           %   better tables
+\usepackage{float}              %   float options
+\usepackage[hidelinks]{hyperref}           %   hyperlinks
+\usepackage{graphicx}           %   images
+\usepackage[brazilian]{babel}   %   pt-br
+
+% change default font family to sans-serif
+\renewcommand{\familydefault}{\sfdefault}
+
+\title{\textbf{Implementação Paralela de Random Forest usando OpenMP}}
+\author{Eduardo Birkheuer da Silva \and João Pedro Ferreira Pereira \and Walter Frank}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\vspace{2cm}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.25\textwidth]{inf_logo.png}
+\end{figure}
+\begin{center}
+    INF01017 - Programação Distribuída e Paralela
+\end{center}
+
+\vspace{2cm}
+
+
+
+\newpage
+\tableofcontents
+\newpage
+
+\section{Introdução}
+
+Este relatório apresenta a implementação e análise de um algoritmo Random Forest paralelo usando OpenMP. O trabalho visa demonstrar melhorias de desempenho através da paralelização e analisar o comportamento da aplicação usando o Intel VTune Profiler.
+
+\subsection{Visão Geral do Algoritmo Random Forest}
+Floresta aleatória ou floresta de decisão é um método de aprendizado de máquina do tipo ensemble que constrói múltiplas árvores de decisão durante o treinamento para realizar a classificação de dados ou regressão. No caso da classificação, a previsão final é dada por votação majoritária simples das árvores. Já na regressão, a previsão final é dada pela média das previsões das árvores.
+
+\subsection{Objetivos}
+\begin{itemize}
+    \item Implementar versões sequencial e paralela do Random Forest
+    \item Analisar melhorias de desempenho com diferentes números de threads
+    \item Identificar gargalos e oportunidades de otimização usando VTune
+    \item Avaliar escalabilidade e eficiência da implementação paralela
+\end{itemize}
+
+\section{Detalhes da Implementação}
+
+\subsection{Implementação Sequencial}
+
+A implementação sequencial do Random Forest segue o algoritmo clássico proposto por Breiman, combinando técnicas de bagging (bootstrap aggregating) com aleatoriedade de características para criar um ensemble de árvores de decisão.
+
+\textbf{Estrutura de Dados Principal:}
+
+O sistema utiliza uma estrutura modular composta por:
+\begin{itemize}
+    \item \texttt{Dataset}: Estrutura para armazenar características (features) e rótulos (labels) dos dados
+    \item \texttt{TreeNode}: Nó de árvore contendo índice da característica, threshold de divisão, filhos e predição (para folhas)
+    \item \texttt{DecisionTree}: Árvore de decisão implementada como array de nós para eficiência de memória
+    \item \texttt{RandomForest}: Ensemble contendo array de árvores e hiperparâmetros
+\end{itemize}
+
+\textbf{Algoritmo de Treinamento:}
+
+O processo de treinamento segue os seguintes passos:
+
+1. \textbf{Amostragem Bootstrap:} Para cada árvore, é criada uma amostra bootstrap do conjunto de treinamento original, mantendo o mesmo tamanho mas permitindo repetições de amostras.
+
+2. \textbf{Seleção Aleatória de Características:} Cada árvore utiliza apenas um subconjunto aleatório de características, calculado como $\sqrt{n_{features}}$ por padrão, selecionadas sem reposição.
+
+3. \textbf{Construção da Árvore de Decisão:} Cada árvore é construída recursivamente usando um algoritmo guloso similar ao CART:
+   \begin{itemize}
+       \item \textbf{Critério de Divisão:} Impureza de Gini ($Gini = 1 - \sum_{i} p_i^2$)
+       \item \textbf{Busca Exaustiva:} Testa todas as características disponíveis e todos os thresholds possíveis
+       \item \textbf{Estratégia de Threshold:} Utiliza pontos médios entre valores consecutivos ordenados
+       \item \textbf{Divisão Binária:} Cada nó interno divide amostras em dois grupos: $feature \leq threshold$ (esquerda) e $feature > threshold$ (direita)
+   \end{itemize}
+
+4. \textbf{Critérios de Parada:} A construção de cada árvore para quando:
+   \begin{itemize}
+       \item Profundidade máxima atingida (padrão: 10 níveis)
+       \item Número mínimo de amostras para divisão não alcançado (padrão: 2 amostras)
+       \item Nó completamente puro (impureza de Gini = 0)
+       \item Nenhuma divisão melhora a impureza
+   \end{itemize}
+
+\textbf{Algoritmo de Predição:}
+
+A predição segue um processo de votação majoritária:
+\begin{enumerate}
+    \item Cada árvore faz uma predição individual navegando desde a raiz até uma folha
+    \item A navegação segue as condições de divisão: se $feature[i] \leq threshold$, vai para filho esquerdo, senão para o direito
+    \item Nas folhas, retorna a classe majoritária das amostras de treinamento que chegaram àquele nó
+    \item A predição final do ensemble é a classe mais votada entre todas as árvores
+\end{enumerate}
+
+\textbf{Componentes Principais:}
+\begin{itemize}
+    \item Construção de árvore de decisão usando algoritmo guloso similar a CART
+    \item Amostragem bootstrap do conjunto de treinamento para cada árvore
+    \item Seleção aleatória de subconjunto de características (features) para cada árvore
+    \item Divisão recursiva de nodos buscando thresholds e features que minimizam a impureza de Gini
+    \item Critérios de parada: profundidade máxima ou número mínimo de amostras por nodo
+    \item Agregação de predições através de votação majoritária (classificação) ou média (regressão)
+\end{itemize}
+
+\subsection{Estratégia de Implementação Paralela}
+
+\subsubsection{Abordagem de Paralelização}
+[Descrever a estratégia de paralelização escolhida]
+
+\textbf{Diretivas OpenMP Utilizadas:}
+\begin{itemize}
+    \item \texttt{\#pragma omp parallel for} - [explicar uso]
+    \item \texttt{\#pragma omp critical} - [explicar uso]
+    \item \texttt{\#pragma omp reduction} - [explicar uso]
+    \item [Adicionar outras diretivas utilizadas]
+\end{itemize}
+
+\subsubsection{Decisões de Design e Justificativas}
+
+\textbf{Decisão 1:} [Construção paralela de árvores]
+\begin{itemize}
+    \item \textbf{Justificativa:} [Explicar por que esta abordagem foi escolhida]
+    \item \textbf{Implementação:} [Breves detalhes técnicos]
+    \item \textbf{Trade-offs:} [Discutir vantagens e limitações]
+\end{itemize}
+
+\textbf{Decisão 2:} [Estratégia de balanceamento de carga]
+\begin{itemize}
+    \item \textbf{Justificativa:} [Explicar abordagem]
+    \item \textbf{Implementação:} [Detalhes técnicos]
+    \item \textbf{Trade-offs:} [Prós e contras]
+\end{itemize}
+
+\section{Configuração Experimental}
+
+\subsection{Ambiente de Hardware e Software}
+\begin{itemize}
+    \item \textbf{Processador:} [Detalhes da CPU]
+    \item \textbf{Memória:} [Quantidade de RAM]
+    \item \textbf{Sistema Operacional:} [Versão do SO]
+    \item \textbf{Compilador:} [Versão do GCC e flags]
+    \item \textbf{Versão OpenMP:} [Versão]
+\end{itemize}
+
+\subsection{Conjuntos de Dados}
+[Descrever conjuntos de dados utilizados para testes]
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+\textbf{Dataset} & \textbf{Tamanho} & \textbf{Características} & \textbf{Amostras} & \textbf{Propósito} \\
+\hline
+Pequeno & [tamanho] & [quantidade] & [quantidade] & Teste rápido \\
+\hline
+Médio & [tamanho] & [quantidade] & [quantidade] & Análise de escala \\
+\hline
+Grande & [tamanho] & [quantidade] & [quantidade] & Teste de stress \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Metodologia de Teste}
+\begin{itemize}
+    \item \textbf{Números de threads testados:} 1, 2, 4, 8, 16
+    \item \textbf{Iterações por teste:} 5 (para significância estatística)
+    \item \textbf{Métricas coletadas:} Tempo de execução, precisão, uso de memória
+\end{itemize}
+
+\section{Resultados de Desempenho}
+
+\subsection{Análise do Tempo de Execução}
+
+[Inserir gráficos de desempenho aqui]
+
+\textbf{Observações Principais:}
+\begin{itemize}
+    \item [Observação 1 sobre tempos de execução]
+    \item [Observação 2 sobre comportamento de escala]
+    \item [Observação 3 sobre número ótimo de threads]
+\end{itemize}
+
+\subsection{Análise de Speedup}
+
+\textbf{Fórmula de Speedup:} $S(p) = T(1) / T(p)$
+
+[Inserir gráficos de speedup aqui]
+
+\textbf{Resumo dos Resultados:}
+\begin{itemize}
+    \item \textbf{Melhor speedup alcançado:} [valor] com [número de threads] threads
+    \item \textbf{Faixa de speedup linear:} [faixa de threads]
+    \item \textbf{Degradação de speedup:} [além de qual número de threads]
+\end{itemize}
+
+\subsection{Análise de Eficiência}
+
+\textbf{Fórmula de Eficiência:} $E(p) = S(p) / p$
+
+[Inserir gráficos de eficiência aqui]
+
+\textbf{Análise de Eficiência:}
+\begin{itemize}
+    \item \textbf{Eficiência máxima:} [valor] com [número de threads] threads
+    \item \textbf{Limiar de eficiência:} [valor] onde eficiência cai abaixo de 70\%
+    \item \textbf{Limite de escalabilidade:} [análise de quando eficiência degrada significativamente]
+\end{itemize}
+
+\section{Análise do Intel VTune Profiler}
+
+\subsection{Análise de Snapshot de Desempenho}
+
+[Inserir resultados de snapshot de desempenho do VTune]
+
+\textbf{Métricas Principais:}
+\begin{itemize}
+    \item \textbf{Utilização de CPU:} [porcentagem]
+    \item \textbf{Uso de Memória:} [análise]
+    \item \textbf{Eficiência de Threading:} [análise]
+\end{itemize}
+
+\subsection{Análise de Hotspots}
+
+[Inserir resultados de análise de hotspots]
+
+\textbf{Principais Consumidores de CPU:}
+\begin{enumerate}
+    \item [Nome da função] - [porcentagem] do tempo de execução
+    \item [Nome da função] - [porcentagem] do tempo de execução
+    \item [Nome da função] - [porcentagem] do tempo de execução
+\end{enumerate}
+
+\textbf{Oportunidades de Otimização:}
+\begin{itemize}
+    \item [Oportunidade 1 com explicação]
+    \item [Oportunidade 2 com explicação]
+\end{itemize}
+
+\subsection{Análise de Desempenho HPC}
+
+[Inserir resultados de desempenho HPC]
+
+\textbf{Métricas Paralelas:}
+\begin{itemize}
+    \item \textbf{Tempo Paralelo:} [porcentagem]
+    \item \textbf{Tempo Serial:} [porcentagem]
+    \item \textbf{Balanceamento de Carga:} [análise]
+    \item \textbf{Contenção de Locks:} [se houver]
+\end{itemize}
+
+\section{Discussão}
+
+\subsection{Análise de Desempenho}
+[Discussão detalhada dos resultados]
+
+\subsection{Gargalos Identificados}
+[Análise das limitações de desempenho]
+
+\subsection{Comparação com Expectativas Teóricas}
+[Como os resultados se comparam às previsões da lei de Amdahl]
+
+\subsection{Limitações e Trabalhos Futuros}
+[Discutir limitações atuais e potenciais melhorias]
+
+\section{Conclusões}
+
+[Resumo das principais descobertas e conquistas]
+
+\textbf{Principais Contribuições:}
+\begin{itemize}
+    \item [Contribuição 1]
+    \item [Contribuição 2]
+    \item [Contribuição 3]
+\end{itemize}
+
+\textbf{Resumo de Desempenho:}
+\begin{itemize}
+    \item \textbf{Speedup máximo alcançado:} [valor]
+    \item \textbf{Configuração ótima de threads:} [detalhes]
+    \item \textbf{Eficiência na configuração ótima:} [valor]
+\end{itemize}
+
+\section{Referências}
+
+[Referências acadêmicas e fontes de documentação]
+
+\section{Apêndices}
+
+\subsection{Estrutura do Código Fonte}
+[Breve visão geral da organização do código]
+
+\subsection{Instruções de Compilação}
+[Instruções detalhadas de build]
+
+\subsection{Dados Completos de Desempenho}
+[Tabelas detalhadas de desempenho]
+
+\end{document}

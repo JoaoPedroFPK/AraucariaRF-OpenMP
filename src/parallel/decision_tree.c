@@ -1,4 +1,5 @@
 #include "random_forest.h"
+#include <omp.h>
 
 DecisionTree* create_decision_tree(int max_depth, int min_samples_split) {
     DecisionTree* tree = malloc(sizeof(DecisionTree));
@@ -68,46 +69,61 @@ int find_best_split(Dataset* data, int* indices, int n_samples, int* feature_ind
         }
         
         // Sort values to find potential split points
-        merge_sort(values, n_samples);
+        merge_sort(values, n_samples); // <-- paralelizar? não (vetores pequenos demais)
         
         // Try each potential split point
-        for (int i = 0; i < n_samples - 1; i++) {
-            if (values[i] == values[i + 1]) continue; // Skip identical values
-            
-            double threshold = (values[i] + values[i + 1]) / 2.0;
-            
-            // Split samples
-            int* left_labels = malloc(n_samples * sizeof(int));
-            int* right_labels = malloc(n_samples * sizeof(int));
-            int left_count = 0, right_count = 0;
-            
-            for (int j = 0; j < n_samples; j++) {
-                if (data->features[indices[j]][feature_idx] <= threshold) {
-                    left_labels[left_count++] = data->labels[indices[j]];
-                } else {
-                    right_labels[right_count++] = data->labels[indices[j]];
+        #pragma omp parallel
+        {
+            double local_best_gini = 1.0;
+            double local_best_threshold = 0.0;
+
+            #pragma omp for nowait schedule(static)
+            for (int i = 0; i < n_samples - 1; i++) { // <- paralelizar, sim!
+                if (values[i] == values[i + 1]) continue; // Skip identical values
+                
+                double threshold = (values[i] + values[i + 1]) / 2.0;
+                
+                // Split samples
+                int* left_labels = malloc(n_samples * sizeof(int));
+                int* right_labels = malloc(n_samples * sizeof(int));
+                int left_count = 0, right_count = 0;
+                
+                for (int j = 0; j < n_samples; j++) {
+                    if (data->features[indices[j]][feature_idx] <= threshold) {
+                        left_labels[left_count++] = data->labels[indices[j]];
+                    } else {
+                        right_labels[right_count++] = data->labels[indices[j]];
+                    }
                 }
-            }
-            
-            if (left_count == 0 || right_count == 0) {
+                
+                if (left_count == 0 || right_count == 0) {
+                    free(left_labels);
+                    free(right_labels);
+                    continue;
+                }
+                
+                // Calculate weighted gini impurity
+                double left_gini = calculate_gini_impurity(left_labels, left_count);
+                double right_gini = calculate_gini_impurity(right_labels, right_count);
+                double weighted_gini = (left_count * left_gini + right_count * right_gini) / n_samples;
+                
+                if (weighted_gini < local_best_gini) {
+                    local_best_gini = weighted_gini;
+                    local_best_threshold = threshold;
+                }
+                
                 free(left_labels);
                 free(right_labels);
-                continue;
             }
-            
-            // Calculate weighted gini impurity
-            double left_gini = calculate_gini_impurity(left_labels, left_count);
-            double right_gini = calculate_gini_impurity(right_labels, right_count);
-            double weighted_gini = (left_count * left_gini + right_count * right_gini) / n_samples;
-            
-            if (weighted_gini < best_gini) {
-                best_gini = weighted_gini;
-                *best_feature = feature_idx;
-                *best_threshold = threshold;
+
+            #pragma omp critical
+            {
+                if (local_best_gini < best_gini) {
+                    best_gini = local_best_gini;
+                    *best_feature = feature_idx;
+                    *best_threshold = local_best_threshold;
+                }
             }
-            
-            free(left_labels);
-            free(right_labels);
         }
         
         free(values);
