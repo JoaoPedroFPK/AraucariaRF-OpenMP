@@ -115,30 +115,55 @@ A predição segue um processo de votação majoritária:
 \subsection{Estratégia de Implementação Paralela}
 
 \subsubsection{Abordagem de Paralelização}
-[Descrever a estratégia de paralelização escolhida]
+
+A paralelização do algoritmo Random Forest foi implementada seguindo uma estratégia de múltiplos níveis, aproveitando as características naturalmente paralelas do algoritmo. A abordagem principal baseia-se no fato de que o treinamento de cada árvore da floresta é completamente independente, permitindo paralelização em nível de árvore. Adicionalmente, foram identificados e paralelizados outros pontos críticos do algoritmo para maximizar o desempenho.
+
+A estratégia de paralelização implementada contempla quatro principais áreas de otimização:
+
+\begin{enumerate}
+    \item \textbf{Paralelização do Treinamento de Árvores:} Distribuição das árvores da floresta entre threads diferentes
+    \item \textbf{Paralelização da Busca por Melhor Split:} Distribuição dos potenciais pontos de divisão entre threads
+    \item \textbf{Paralelização da Predição:} Distribuição das árvores durante o processo de inferência
+    \item \textbf{Paralelização da Avaliação de Precisão:} Processamento paralelo das amostras de teste
+\end{enumerate}
 
 \textbf{Diretivas OpenMP Utilizadas:}
 \begin{itemize}
-    \item \texttt{\#pragma omp parallel for} - [explicar uso]
-    \item \texttt{\#pragma omp critical} - [explicar uso]
-    \item \texttt{\#pragma omp reduction} - [explicar uso]
-    \item [Adicionar outras diretivas utilizadas]
+    \item \texttt{\#pragma omp parallel for schedule(static)} - Distribuição estática de iterações entre threads para treinamento e predição
+    \item \texttt{\#pragma omp critical} - Proteção de seções críticas durante atualizações de variáveis compartilhadas
+    \item \texttt{\#pragma omp reduction(+:correct\_predictions)} - Redução paralela para soma thread-safe na avaliação de precisão
+    \item \texttt{\#pragma omp atomic capture} - Operações atômicas para contadores compartilhados
+    \item \texttt{\#pragma omp parallel} com \texttt{\#pragma omp for nowait} - Regiões paralelas com distribuição de trabalho sem sincronização
 \end{itemize}
 
 \subsubsection{Decisões de Design e Justificativas}
 
-\textbf{Decisão 1:} [Construção paralela de árvores]
+\textbf{Decisão 1:} Paralelização do Treinamento de Árvores da Floresta
 \begin{itemize}
-    \item \textbf{Justificativa:} [Explicar por que esta abordagem foi escolhida]
-    \item \textbf{Implementação:} [Breves detalhes técnicos]
-    \item \textbf{Trade-offs:} [Discutir vantagens e limitações]
+    \item \textbf{Justificativa:} Esta foi a primeira e mais óbvia otimização, visto que o treinamento de cada árvore é totalmente independente das demais. Cada árvore utiliza uma amostra bootstrap diferente e um subconjunto aleatório de características, não havendo dependências entre as árvores.
+    \item \textbf{Implementação:} Utilização de \texttt{\#pragma omp parallel for schedule(static)} na função \texttt{train\_random\_forest}, permitindo que cada thread processe um subconjunto das árvores de forma balanceada.
+    \item \textbf{Trade-offs:} Proporciona excelente escalabilidade com overhead mínimo, mas requer cuidado com o gerenciamento de memória para evitar condições de corrida durante a alocação de estruturas das árvores.
 \end{itemize}
 
-\textbf{Decisão 2:} [Estratégia de balanceamento de carga]
+\textbf{Decisão 2:} Paralelização da Busca pelo Melhor Split
 \begin{itemize}
-    \item \textbf{Justificativa:} [Explicar abordagem]
-    \item \textbf{Implementação:} [Detalhes técnicos]
-    \item \textbf{Trade-offs:} [Prós e contras]
+    \item \textbf{Justificativa:} A busca pelo melhor ponto de divisão representa uma porção significativa do tempo computacional, especialmente com muitas características. Cada potencial split pode ser avaliado independentemente.
+    \item \textbf{Implementação:} Implementação de região paralela com \texttt{\#pragma omp parallel} seguido de \texttt{\#pragma omp for nowait schedule(static)} na função \texttt{find\_best\_split}, onde cada thread mantém variáveis locais para o melhor resultado e utiliza seção crítica para atualizar o resultado global.
+    \item \textbf{Trade-offs:} Melhora significativa de desempenho em datasets com muitas características, mas pode introduzir overhead em datasets pequenos devido ao custo de sincronização.
+\end{itemize}
+
+\textbf{Decisão 3:} Paralelização da Predição das Árvores
+\begin{itemize}
+    \item \textbf{Justificativa:} Durante a fase de predição, cada árvore pode fazer sua predição independentemente, e a votação majoritária pode ser calculada de forma paralela.
+    \item \textbf{Implementação:} Distribuição das árvores entre threads usando \texttt{\#pragma omp parallel for schedule(static)} na função \texttt{predict\_random\_forest}, permitindo que cada thread processe um subconjunto das árvores da floresta.
+    \item \textbf{Trade-offs:} Acelera significativamente a fase de inferência, especialmente importante para florestas grandes, com overhead mínimo para sincronização de resultados.
+\end{itemize}
+
+\textbf{Decisão 4:} Paralelização da Avaliação de Precisão
+\begin{itemize}
+    \item \textbf{Justificativa:} A avaliação da precisão envolve processar múltiplas amostras de teste independentemente, sendo naturalmente paralelizável.
+    \item \textbf{Implementação:} Utilização de \texttt{\#pragma omp parallel for reduction(+:correct\_predictions)} na função \texttt{evaluate\_accuracy}, permitindo que cada thread processe um subconjunto das amostras e contribua para o contador total de predições corretas de forma thread-safe.
+    \item \textbf{Trade-offs:} Oferece speedup proporcional ao número de amostras de teste, com a vantagem de usar redução automática do OpenMP para evitar condições de corrida.
 \end{itemize}
 
 \section{Configuração Experimental}
