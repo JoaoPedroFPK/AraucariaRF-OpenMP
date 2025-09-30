@@ -10,12 +10,11 @@ cd "$PROJECT_ROOT"
 
 # Configuration
 RESULTS_DIR="$PROJECT_ROOT/results/performance"
-SEQUENTIAL_BIN="$PROJECT_ROOT/bin/rf_sequential"
 PARALLEL_BIN="$PROJECT_ROOT/bin/rf_parallel"
 DATA_DIR="$PROJECT_ROOT/data/processed"
 
 # Thread counts to test
-THREAD_COUNTS=(1 2 4 8 16)
+THREAD_COUNTS=(1 2 4 8 16 20 24)
 
 # Number of test iterations for statistical significance
 ITERATIONS=5
@@ -44,7 +43,8 @@ run_test() {
         
         # Run the test and capture timing output
         # Format: dataset,threads,iteration,time_seconds,accuracy
-        if timeout 300 "$binary" "$dataset" >> "$output_file" 2>&1; then
+        # Only extract lines starting with "RESULT," and filter out the "RESULT," prefix
+        if timeout 300 "$binary" "$dataset" 2>&1 | grep "^RESULT," | sed 's/^RESULT,//' >> "$output_file"; then
             echo "    ✓ Completed"
         else
             echo "    ✗ Failed or timeout"
@@ -59,20 +59,14 @@ test_dataset() {
     
     echo "--- Testing dataset: $dataset_name ---"
     
-    # Results files
-    local seq_results="$RESULTS_DIR/${dataset_name}_sequential.csv"
+    # Results file
     local par_results="$RESULTS_DIR/${dataset_name}_parallel.csv"
     
     # Clear previous results
-    echo "dataset,threads,iteration,time_seconds,accuracy" > "$seq_results"
     echo "dataset,threads,iteration,time_seconds,accuracy" > "$par_results"
     
-    # Test sequential version (single thread)
-    echo "Testing sequential implementation..."
-    run_test "$SEQUENTIAL_BIN" "$dataset" 1 "$seq_results"
-    
     # Test parallel version with different thread counts
-    echo "Testing parallel implementation..."
+    echo "Testing parallel implementation with varying thread counts..."
     for threads in "${THREAD_COUNTS[@]}"; do
         run_test "$PARALLEL_BIN" "$dataset" "$threads" "$par_results"
     done
@@ -80,16 +74,10 @@ test_dataset() {
 
 # Main execution
 main() {
-    # Check if binaries exist
-    if [[ ! -f "$SEQUENTIAL_BIN" ]]; then
-        echo "Error: Sequential binary not found. Please compile first."
-        echo "Run: ./scripts/build/compile.sh"
-        exit 1
-    fi
-    
+    # Check if parallel binary exists
     if [[ ! -f "$PARALLEL_BIN" ]]; then
         echo "Error: Parallel binary not found. Please compile first."
-        echo "Run: ./scripts/build/compile.sh"
+        echo "Run: make parallel"
         exit 1
     fi
     
