@@ -1,0 +1,7 @@
+dataset,threads,iteration,time_seconds,accuracy
+/home/users/wfrank/AraucariaRF-OpenMP/data/processed/company_bankruptcy.csv,4,1,206.1639,0.9611
+/home/users/wfrank/AraucariaRF-OpenMP/data/processed/company_bankruptcy.csv,8,1,99.0466,0.9575
+/home/users/wfrank/AraucariaRF-OpenMP/data/processed/company_bankruptcy.csv,12,1,63.6758,0.9267
+/home/users/wfrank/AraucariaRF-OpenMP/data/processed/company_bankruptcy.csv,16,1,49.5934,0.9370
+/home/users/wfrank/AraucariaRF-OpenMP/data/processed/company_bankruptcy.csv,20,1,40.7811,0.9685
+/home/users/wfrank/AraucariaRF-OpenMP/data/processed/company_bankruptcy.csv,24,1,43.1694,0.9648

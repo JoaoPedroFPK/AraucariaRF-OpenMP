@@ -1,0 +1,8 @@
+dataset,threads,iteration,time_seconds,accuracy
+/home/users/wfrank/AraucariaRF-OpenMP/data/processed/creditcard_small.csv,2,1,235.2918,1.0000
+/home/users/wfrank/AraucariaRF-OpenMP/data/processed/creditcard_small.csv,4,1,131.8993,1.0000
+/home/users/wfrank/AraucariaRF-OpenMP/data/processed/creditcard_small.csv,8,1,70.2733,0.9994
+/home/users/wfrank/AraucariaRF-OpenMP/data/processed/creditcard_small.csv,12,1,38.8474,0.9994
+/home/users/wfrank/AraucariaRF-OpenMP/data/processed/creditcard_small.csv,16,1,35.1171,0.9988
+/home/users/wfrank/AraucariaRF-OpenMP/data/processed/creditcard_small.csv,20,1,30.4906,0.9994
+/home/users/wfrank/AraucariaRF-OpenMP/data/processed/creditcard_small.csv,24,1,31.0842,0.9994

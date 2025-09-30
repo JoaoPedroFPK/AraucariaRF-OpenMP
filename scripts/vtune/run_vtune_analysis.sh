@@ -17,7 +17,7 @@ DATA_DIR="$PROJECT_ROOT/data/processed"
 ANALYSIS_TYPES=("performance-snapshot" "hotspots" "hpc-performance")
 
 # Thread count for profiling (use optimal from performance tests)
-PROFILE_THREADS=4
+PROFILE_THREADS=20
 
 # Create results directory
 mkdir -p "$RESULTS_DIR"

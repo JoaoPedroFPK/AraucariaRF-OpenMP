@@ -170,11 +170,11 @@ A estratégia de paralelização implementada contempla quatro principais áreas
 
 \subsection{Ambiente de Hardware e Software}
 \begin{itemize}
-    \item \textbf{Processador:} [Detalhes da CPU]
-    \item \textbf{Memória:} [Quantidade de RAM]
-    \item \textbf{Sistema Operacional:} [Versão do SO]
-    \item \textbf{Compilador:} [Versão do GCC e flags]
-    \item \textbf{Versão OpenMP:} [Versão]
+    \item \textbf{Processador:} 2 x Intel(R) Xeon(R) E5-2650 v3, 2.30 GHz, 40 threads, 20 cores
+    \item \textbf{Memória:} 128 GB DDR4
+    \item \textbf{Sistema Operacional:} Debian 12.1
+    \item \textbf{Compilador:} Gcc 12.2.0 -Wall -Wextra -O3 -fopenmp -std=c++17
+    \item \textbf{Versão OpenMP:} 5.1
 \end{itemize}
 
 \subsection{Conjuntos de Dados}
@@ -186,40 +186,50 @@ A estratégia de paralelização implementada contempla quatro principais áreas
 \hline
 \textbf{Dataset} & \textbf{Tamanho} & \textbf{Características} & \textbf{Amostras} & \textbf{Propósito} \\
 \hline
-Pequeno & [tamanho] & [quantidade] & [quantidade] & Teste rápido \\
+Iris Test & 627B & 5 & 30 & Teste rápido \\
 \hline
-Médio & [tamanho] & [quantidade] & [quantidade] & Análise de escala \\
+Student Performance Small & 813KB & 6 & 30000 & Análise de escala \\
 \hline
-Grande & [tamanho] & [quantidade] & [quantidade] & Teste de stress \\
+Credit Card Small & 4.0MB & 31 & 8000 & Análise de escala \\
+\hline
+Company Bankruptcy & 11MB & 96 & 6819 & Teste de stress \\
 \hline
 \end{tabular}
 \end{table}
 
 \subsection{Metodologia de Teste}
 \begin{itemize}
-    \item \textbf{Números de threads testados:} 1, 2, 4, 8, 16
+    \item \textbf{Números de threads testados:} 1, 2, 4, 8, 12, 16, 20, 24
     \item \textbf{Iterações por teste:} 5 (para significância estatística)
-    \item \textbf{Métricas coletadas:} Tempo de execução, precisão, uso de memória
+    \item \textbf{Métricas coletadas:} Tempo de execução, precisão
 \end{itemize}
 
 \section{Resultados de Desempenho}
 
 \subsection{Análise do Tempo de Execução}
 
-[Inserir gráficos de desempenho aqui]
+
+
+
+
+
 
 \textbf{Observações Principais:}
 \begin{itemize}
-    \item [Observação 1 sobre tempos de execução]
-    \item [Observação 2 sobre comportamento de escala]
-    \item [Observação 3 sobre número ótimo de threads]
+    \item Em datasets pequenos, o overhead de gerenciamento de threads se torna significativo muito rapidamente, já causando uma degradação de desempenho ap usar mais do que 8 threads
+    \item O desempenho dos datasets deixa de aumentar depois que o número de threads ultrapassa o número de cores físicos do processador
+    \item O desempenho ótimo é alcançado com 20 threads
 \end{itemize}
 
 \subsection{Análise de Speedup}
 
 \textbf{Fórmula de Speedup:} $S(p) = T(1) / T(p)$
 
-[Inserir gráficos de speedup aqui]
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{../../results/graphs/all_datasets_speedup.png}
+    \caption{Tempo de Execução para todos os datasets}
+\end{figure}
 
 \textbf{Resumo dos Resultados:}
 \begin{itemize}
@@ -232,7 +242,11 @@ Grande & [tamanho] & [quantidade] & [quantidade] & Teste de stress \\
 
 \textbf{Fórmula de Eficiência:} $E(p) = S(p) / p$
 
-[Inserir gráficos de eficiência aqui]
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{../../results/graphs/all_datasets_execution_time.png}
+    \caption{Tempo de Execução para todos os datasets}
+\end{figure}
 
 \textbf{Análise de Eficiência:}
 \begin{itemize}
