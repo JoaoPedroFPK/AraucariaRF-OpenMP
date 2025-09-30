@@ -14,10 +14,10 @@ PARALLEL_BIN="$PROJECT_ROOT/bin/rf_parallel"
 DATA_DIR="$PROJECT_ROOT/data/processed"
 
 # Thread counts to test
-THREAD_COUNTS=(1 2 4 8 16 20 24)
+THREAD_COUNTS=(1 2 4 8 12 16 20 24)
 
 # Number of test iterations for statistical significance
-ITERATIONS=5
+ITERATIONS=1
 
 # Create results directory
 mkdir -p "$RESULTS_DIR"
