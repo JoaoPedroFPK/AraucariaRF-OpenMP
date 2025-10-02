@@ -28,13 +28,13 @@ def main():
     
     for i, df in enumerate(all_data):
         dataset_name = os.path.basename(df['dataset'].iloc[0]).replace('.csv', '')
-        
+
         # Group by threads and get the average time, handling missing thread counts
         grouped_data = df.groupby('threads')['time_seconds'].mean().reindex(thread_counts)
         available_data = grouped_data.dropna()
-        
-        plt.plot(available_data.index, available_data.values, 
-                marker='o', linestyle='-', color=colors[i % len(colors)], 
+
+        plt.plot(available_data.index, available_data.values,
+                marker='o', linestyle='-', color=colors[i % len(colors)],
                 label=dataset_name, linewidth=2, markersize=6)
     
     plt.title('Execution Time vs. Number of Threads (All Datasets)', fontsize=16)
@@ -55,11 +55,11 @@ def main():
     
     for i, df in enumerate(all_data):
         dataset_name = os.path.basename(df['dataset'].iloc[0]).replace('.csv', '')
-        
+
         # Group by threads and get the average time, handling missing thread counts
         grouped_data = df.groupby('threads')['time_seconds'].mean().reindex(thread_counts)
         available_data = grouped_data.dropna()
-        
+
         if len(available_data) > 0:
             # Try to use 1 thread as baseline, otherwise use the smallest thread count available
             if 1 in available_data.index:
@@ -70,12 +70,12 @@ def main():
                 baseline_threads = available_data.index.min()
                 baseline_time = available_data.loc[baseline_threads]
                 baseline_label = f" (baseline: {baseline_threads} threads)"
-            
+
             # Calculate speedup: baseline_time / t_n
             speedup = baseline_time / available_data
-            
-            plt.plot(speedup.index, speedup.values, 
-                    marker='o', linestyle='-', color=colors[i % len(colors)], 
+
+            plt.plot(speedup.index, speedup.values,
+                    marker='o', linestyle='-', color=colors[i % len(colors)],
                     label=f'{dataset_name}{baseline_label}', linewidth=2, markersize=6)
     
     plt.title('Speedup vs. Number of Threads (All Datasets)', fontsize=16)

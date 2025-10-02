@@ -17,7 +17,7 @@ DATA_DIR="$PROJECT_ROOT/data/processed"
 THREAD_COUNTS=(1 2 4 8 12 16 20 24)
 
 # Number of test iterations for statistical significance
-ITERATIONS=1
+ITERATIONS=3
 
 # Create results directory
 mkdir -p "$RESULTS_DIR"
@@ -44,10 +44,13 @@ run_test() {
         # Run the test and capture timing output
         # Format: dataset,threads,iteration,time_seconds,accuracy
         # Only extract lines starting with "RESULT," and filter out the "RESULT," prefix
-        if timeout 300 "$binary" "$dataset" 2>&1 | grep "^RESULT," | sed 's/^RESULT,//' >> "$output_file"; then
+        if timeout 240 "$binary" "$dataset" -r 0.5 2>&1 | grep "^RESULT," | sed 's/^RESULT,//' >> "$output_file"; then
             echo "    ✓ Completed"
         else
             echo "    ✗ Failed or timeout"
+            # Ensure a CSV entry is still recorded for failures/timeouts
+            # Format: dataset,threads,iteration,time_seconds,accuracy
+            echo "${dataset},${threads},${i},-1,-1" >> "$output_file"
         fi
     done
 }

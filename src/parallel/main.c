@@ -1,4 +1,6 @@
 #include "random_forest.h"
+#include <stdlib.h>
+#include <string.h>
 
 void print_usage(const char* program_name) {
     printf("Usage: %s <dataset_path> [options]\n", program_name);
@@ -122,15 +124,20 @@ int main(int argc, char* argv[]) {
     printf("---\n");
     
     // Print final results in CSV format for benchmarking
-    printf("RESULT,%s,1,1,%.4f,%.4f\n", 
-           dataset_path, training_time + prediction_time, accuracy);
+    int num_threads_used = 1;
+    char* omp_env = getenv("OMP_NUM_THREADS");
+    if (omp_env != NULL && strlen(omp_env) > 0) {
+        num_threads_used = atoi(omp_env);
+    }
+    printf("RESULT,%s,%d,1,%.4f,%.4f\n", 
+           dataset_path, num_threads_used, training_time + prediction_time, accuracy);
     
     // Performance metrics
     PerformanceMetrics metrics;
     metrics.execution_time = training_time + prediction_time;
     metrics.accuracy = accuracy;
     metrics.n_trees_used = n_trees;
-    metrics.n_threads_used = 1;
+    metrics.n_threads_used = num_threads_used;
     
     print_performance_metrics(&metrics, dataset_path);
     
