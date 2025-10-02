@@ -44,7 +44,7 @@ run_test() {
         # Run the test and capture timing output
         # Format: dataset,threads,iteration,time_seconds,accuracy
         # Only extract lines starting with "RESULT," and filter out the "RESULT," prefix
-        if timeout 240 "$binary" "$dataset" -r 0.5 2>&1 | grep "^RESULT," | sed 's/^RESULT,//' >> "$output_file"; then
+        if timeout 240 "$binary" "$dataset" -r 0.6 2>&1 | grep "^RESULT," | sed 's/^RESULT,//' >> "$output_file"; then
             echo "    ✓ Completed"
         else
             echo "    ✗ Failed or timeout"
