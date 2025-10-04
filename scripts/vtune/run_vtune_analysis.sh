@@ -4,6 +4,7 @@
 # This script runs the three recommended analysis types: performance-snapshot, hotspots, and hpc-performance
 
 set -e
+set -o pipefail
 
 PROJECT_ROOT="$(dirname "$(dirname "$(dirname "$(realpath "$0")")")")"
 cd "$PROJECT_ROOT"
@@ -16,8 +17,27 @@ DATA_DIR="$PROJECT_ROOT/data/processed"
 # VTune analysis types
 ANALYSIS_TYPES=("performance-snapshot" "hotspots" "hpc-performance")
 
+# Allow override via env var (comma-separated), e.g. VTUNE_ANALYSIS_TYPES="hotspots,hpc-performance"
+if [[ -n "${VTUNE_ANALYSIS_TYPES:-}" ]]; then
+    IFS=',' read -r -a ANALYSIS_TYPES <<< "$VTUNE_ANALYSIS_TYPES"
+fi
+
+# Unique run identifier for result directories
+RUN_ID=$(date +%Y%m%d-%H%M%S)
+
+# Set to 1 to skip performance-snapshot (workaround for older VTune/Pin on RELR systems)
+SKIP_PERF_SNAPSHOT="${VTUNE_SKIP_SNAPSHOT:-0}"
+
 # Thread count for profiling (use optimal from performance tests)
-PROFILE_THREADS=20
+# Set PROFILE_THREADS=auto to auto-detect via nproc
+PROFILE_THREADS=${PROFILE_THREADS:-20}
+if [[ "${PROFILE_THREADS}" == "auto" ]]; then
+    if command -v nproc &> /dev/null; then
+        PROFILE_THREADS=$(nproc)
+    else
+        PROFILE_THREADS=20
+    fi
+fi
 
 # Create results directory
 mkdir -p "$RESULTS_DIR"
@@ -35,10 +55,24 @@ check_vtune() {
         # Try to source VTune environment (adjust path as needed)
         if [[ -f "/home/intel/oneapi/vtune/2021.1.1/vtune-vars.sh" ]]; then
             source /home/intel/oneapi/vtune/2021.1.1/vtune-vars.sh
-            echo "✓ VTune environment loaded"
+            echo "✓ VTune environment loaded (/home/intel/oneapi)"
+        elif [[ -n "${VTUNE_HOME:-}" && -f "${VTUNE_HOME}/vtune-vars.sh" ]]; then
+            # Standard VTune installation exposes VTUNE_HOME
+            # shellcheck disable=SC1090
+            source "${VTUNE_HOME}/vtune-vars.sh"
+            echo "✓ VTune environment loaded (VTUNE_HOME)"
+        elif [[ -n "${ONEAPI_ROOT:-}" && -f "${ONEAPI_ROOT}/vtune/latest/vtune-vars.sh" ]]; then
+            # OneAPI layout
+            # shellcheck disable=SC1090
+            source "${ONEAPI_ROOT}/vtune/latest/vtune-vars.sh"
+            echo "✓ VTune environment loaded (ONEAPI_ROOT)"
+        elif [[ -f "/opt/intel/oneapi/vtune/latest/vtune-vars.sh" ]]; then
+            # Common Linux path
+            source /opt/intel/oneapi/vtune/latest/vtune-vars.sh
+            echo "✓ VTune environment loaded (/opt/intel/oneapi)"
         else
             echo "✗ Error: VTune not found and environment script not available"
-            echo "Please ensure VTune is installed and accessible"
+            echo "Please ensure VTune is installed and accessible (consider updating to the latest VTune version)."
             exit 1
         fi
     fi
@@ -49,7 +83,12 @@ run_vtune_analysis() {
     local analysis_type=$1
     local dataset=$2
     local dataset_name=$(basename "$dataset" .csv)
-    local result_dir="$RESULTS_DIR/${dataset_name}_${analysis_type}"
+    local result_dir="$RESULTS_DIR/${dataset_name}_${analysis_type}_${RUN_ID}"
+    
+    if [[ "$analysis_type" == "performance-snapshot" && "$SKIP_PERF_SNAPSHOT" == "1" ]]; then
+        echo "Skipping $analysis_type for $dataset_name (VTUNE_SKIP_SNAPSHOT=1)"
+        return 0
+    fi
     
     echo "Running $analysis_type analysis on $dataset_name..."
     
@@ -57,6 +96,7 @@ run_vtune_analysis() {
     export OMP_NUM_THREADS=$PROFILE_THREADS
     
     # Run VTune analysis
+    echo "Command: vtune -collect $analysis_type -result-dir $result_dir -app-working-dir $PROJECT_ROOT -- $PARALLEL_BIN $dataset"
     vtune -collect "$analysis_type" \
           -result-dir "$result_dir" \
           -app-working-dir "$PROJECT_ROOT" \
@@ -64,7 +104,7 @@ run_vtune_analysis() {
     
     # Generate report
     local report_file="$RESULTS_DIR/${dataset_name}_${analysis_type}_report.txt"
-    vtune -report summary -result-dir "$result_dir" > "$report_file"
+    vtune -report summary -result-dir "$result_dir" -report-output "$report_file"
     
     echo "✓ $analysis_type analysis completed"
     echo "  Result directory: $result_dir"
@@ -90,6 +130,7 @@ generate_summary() {
     echo "# Intel VTune Profiler Analysis Summary" > "$summary_file"
     echo "" >> "$summary_file"
     echo "Generated on: $(date)" >> "$summary_file"
+    echo "Run ID: $RUN_ID" >> "$summary_file"
     echo "Thread count used: $PROFILE_THREADS" >> "$summary_file"
     echo "" >> "$summary_file"
     
