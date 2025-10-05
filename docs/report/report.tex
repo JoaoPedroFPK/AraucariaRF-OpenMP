@@ -214,7 +214,7 @@ Company Bankruptcy & 11MB & 96 & 6819 \\
 \end{figure}
 
 
-Em datasets maiores, o programa paralelo reduziu monotonicamente o tempo de execução com o aumento de número de threads até o número de núcleos físicos do sistema, a partir do qual apresentou queda. Em datasets menores, o tempo de execução aumentou com o aumento do número de threads, devido ao overhead de gerenciamento de threads não compensando o ganho de desempenho. O número ótimo de threads é 20, fato confirmado pela especificação da máquina hype5 de 20 núcleos físicos.
+Em datasets maiores, o programa paralelo reduziu monotonicamente o tempo de execução com o aumento de número de threads até o número de núcleos físicos do sistema, a partir do qual houve uma inflexão com leve aumento de tempo de execução. Em datasets menores, o tempo de execução aumentou com o aumento do número de threads, devido ao overhead de gerenciamento de threads não compensando o ganho de desempenho. O número ótimo de threads é 20, fato confirmado pela especificação da máquina hype5 de 20 núcleos físicos.
 
 \subsection{Análise de Speedup}
 
